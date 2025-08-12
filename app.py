@@ -1,5 +1,6 @@
 import gradio as gd
 import requests
+import os
 def fetch_prediction(n, p, k, temp, humidity, ph, rainfall):
     API_URL="https://crop-recommendation-api-latest.onrender.com/predict"
     payload = {
@@ -55,4 +56,8 @@ with gd.Blocks() as demo:
         outputs=output
     )
 
-demo.launch()
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 7860))
+    demo.launch(server_name="0.0.0.0" if port != 7860 else "127.0.0.1", server_port=port)
+
