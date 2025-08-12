@@ -1,60 +1,58 @@
-import gradio as gr
-import random
-
-# Fake AI model logic
-def mood_predictor(text, mood_type, intensity):
-    moods = {
-        "Happy": ["😊", "😄", "😁", "🌞"],
-        "Sad": ["😢", "💧", "😔", "🌧️"],
-        "Excited": ["🤩", "🎉", "🔥", "✨"],
-        "Chill": ["😌", "🌊", "🍵", "🌙"]
+import gradio as gd
+import requests
+def fetch_prediction(n, p, k, temp, humidity, ph, rainfall):
+    API_URL="https://crop-recommendation-api-latest.onrender.com/predict"
+    payload = {
+        "n": int(n),
+        "p": int(p),
+        "k": int(k),
+        "temp": float(temp),
+        "humidity": float(humidity),
+        "ph": float(ph),
+        "rainfall": float(rainfall)
     }
-    emoji = random.choice(moods[mood_type])
-    response = f"**Mood:** {mood_type}\n**Intensity:** {intensity}/10\n**Message:** {text} {emoji * intensity}"
-    return response, f"https://source.unsplash.com/800x600/?{mood_type.lower()}"
+    try:
+        result=requests.post(url=API_URL,json=payload)
+        result.raise_for_status()
+        if result.status_code == 200:
+            return result.json()["prediction"]
+    except requests.exceptions.RequestException as e:
+        return f"Error: {e}"
 
-# Custom CSS for background & animation
-custom_css = """
-body {
-    background-image: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb');
-    background-size: cover;
-    font-family: 'Poppins', sans-serif;
-}
 
-h1 {
-    text-align: center;
-    animation: fadeIn 2s ease-in-out;
-    color: white;
-}
 
-@keyframes fadeIn {
-    from {opacity: 0;}
-    to {opacity: 1;}
-}
+with gd.Blocks() as demo:
+    gd.HTML("<h1 style='font-size:60px; text-align:center; color:red;'>Crop Recommendation App</h1>")
+    gd.Markdown("<h2 style='color:blue; font-size:45px' >Please fill in the soil and weather details below.<h2>") 
+    gd.HTML("""
+    <style>
+    body, .gradio-container {
+        background-image: url('https://images6.alphacoders.com/341/341895.jpg');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    """)
 
-.gradio-container {
-    background-color: rgba(0, 0, 0, 0.6);
-    border-radius: 15px;
-    padding: 20px;
-}
-"""
 
-with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
-    gr.Markdown("<h1>🎭 AI Mood Generator</h1>")
+    with gd.Row():
+        n = gd.Number(label="Nitrogen Content", precision=0, minimum=0, maximum=100,value=None,placeholder="Enter Nitrogen Content")
+        p = gd.Number(label="Phosphorous Content", precision=0, minimum=0, maximum=100,value=None,placeholder="Enter Phosphorous Content")
+        k = gd.Number(label="Potassium Content", precision=0, minimum=0, maximum=100,value=None,placeholder="Enter Potassium Content")
     
-    with gr.Tab("Text to Mood"):
-        with gr.Row():
-            text_input = gr.Textbox(label="Enter your message", placeholder="How do you feel today?")
-            mood_type = gr.Dropdown(["Happy", "Sad", "Excited", "Chill"], label="Select Mood")
-            intensity = gr.Slider(1, 10, value=5, step=1, label="Mood Intensity")
-        
-        output_text = gr.Markdown()
-        output_image = gr.Image(label="Mood Image", type="filepath")
-        
-        submit_btn = gr.Button("✨ Generate Mood")
-        submit_btn.click(mood_predictor, [text_input, mood_type, intensity], [output_text, output_image])
+    with gd.Row():
+        temp = gd.Number(label="Temperature (°C)", minimum=0, maximum=65,value=None,placeholder="Enter Temperature")
+        humidity = gd.Number(label="Humidity (%)", minimum=0, maximum=100,value=None,placeholder="Enter Humidity percent")
     
-    with gr.Tab("Live Mood Updates"):
-        gr.Markdown("🎯 Coming soon: Real-time mood tracking!")
+    with gd.Row():
+        ph = gd.Number(label="pH of Soil", minimum=0, maximum=14,value=None,placeholder="Enter Ph of soil")
+        rainfall = gd.Number(label="Rainfall (cm)", minimum=0,value=None,placeholder="Enter rainfall in cm")
+    submit_button=gd.Button("Get recommended crop")
+    output=gd.Textbox(label="Recommended Crop")
+    
+    submit_button.click(
+        fetch_prediction,
+        inputs=[n,p,k,temp,humidity,ph,rainfall],
+        outputs=output
+    )
 
 demo.launch()
